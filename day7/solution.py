@@ -1,69 +1,63 @@
-class Dir:
-  def __init__(self, name: str):
-    self.content = {} # keys -> names, values -> type (dir or file)
-    self.name = name
+from collections import defaultdict
 
-  def set_content(self, name: str, content = None):
-    self.content[name] = content
-
-  def get_content(self):
-    return self.content
-
-  def get_name(self):
-    return self.name
-
-  def get_size(self):
-    size = 0
-    for name, content in self.content:
-      size += content.get_size()
-    return size
-
-class File:
-  def __init__(self, name: str, size: int):
-    self.name = name
-    self.size = size
-
-  def get_content(self):
-    return self.name
-
-  def get_size(self):
-    return self.size
-
-def set_file_system() -> dict[str, Dir | File]:
-  file_system: dict[str, Dir | File] = {}
-  current: str = ""
+def set_directories() -> list[dict]:
+  files = {}
+  history = [] # history of traversed directories
+  current_dir_name = ""
 
   with open("input.txt", "r") as file:
     for line in file.readlines():
       line = line.strip("\n").split()
       if line[0] == "$":
-        command = line[1]
-        match command:
+        match line[1]:
           case "cd":
             if line[2] == "..":
-              current = find_parent_dir(file_system, current)
-              # go back in the tree and find the parent
+              history.pop()
             else:
-              current = line[2]
-              if current not in file_system:
-                file_system[current] = Dir(current)
-          # Don't need to account for ls since current one is set on cd
+              history.append(line[2])
+              files["_".join(history)] = None
+            # '_' indicates subdirectory; not using '/' since root directory is already '/'
+            current_dir_name = "_".join(history)
       elif line[0] == "dir":
-        file_system[current].set_content(Dir(line[1]))
+        files[current_dir_name] = None
       elif line[0].isdigit():
-        file_system[current].set_content(File(line[1], line[0]))
-  return file_system
+        files[current_dir_name+"_"+line[1]] = int(line[0])
+  
+  return files
 
-def find_parent_dir(file_system: dict[str, Dir | File], name: str, parent: str = "/", visited: list = []) -> str:
-  if parent not in visited and name in file_system[parent].get_content():
-    return parent
-  else:
-    visited.append(parent)
-    for child in file_system[name].get_content():
-      print(child.get_name())
-      if type(child) == Dir:
-        find_parent_dir(file_system, name, child.get_name(), visited)
-    
+def get_total_sizes(files_system: dict) -> defaultdict[str, int]:
+  sizes = defaultdict(int)
+  total_sizes = defaultdict(int)
+
+  for name, value in files_system.items():
+    if isinstance(value, int):
+      dir_name = "_".join(name.split("_")[:-1])
+      sizes[dir_name] += value
+  
+  for name, value in sizes.items():
+    dirs = name.split("_")
+    for i in range(len(dirs)):
+      total_sizes["_".join(dirs[0:i+1])] += value
+      
+  return total_sizes
+
+def get_size_of_dir_to_delete(sizes: dict) -> int:
+  total = sizes["/"]
+  update_size = 30000000
+  available = 70000000
+  space_left = available - total
+  space_to_delete = update_size - space_left
+  biggest_sizes = filter(lambda item: item[1] >= space_to_delete, sizes.items())
+  return sorted(biggest_sizes, key=lambda item: item[1])[0][1]
+  
+
 if __name__ == "__main__":
-  files = set_file_system()
-  # print(files["/"].get_content())
+  files = set_directories()
+  sizes = get_total_sizes(files)
+  total_of_small_sizes = sum(filter(lambda item: item <= 100000, sizes.values()))
+
+  # Part 1 solution
+  print(total_of_small_sizes)
+  
+  # Part 2 solution
+  print(get_size_of_dir_to_delete(sizes))
