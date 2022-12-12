@@ -9,7 +9,7 @@ if __name__ == "__main__":
     datastream = file.readline()
 
   # Part 1 solution
-  # print(find_first_marker_count(datastream, 4))
+  print(find_first_marker_count(datastream, 4))
 
   # Part 2 solution
   print(find_first_marker_count(datastream, 14))
