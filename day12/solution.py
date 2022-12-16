@@ -18,22 +18,26 @@ def get_map() -> tuple[list[list[str]], list[tuple[int,int]]]:
   return heightmap, coords[0], coords[1]
 
 def traverse(heightmap: list[list[str]], start: tuple[int, int], end: tuple[int, int]) -> int:
-  count = 0
   visited = []
+  path = []
   current = start
   while current != end:
-    visited.append(current)
-    count += 1
-    neighboring_moves = get_neighboring_moves(heightmap, current[0], current[1], visited)
+    print(heightmap[current[0]][current[1]], current)
+    if current not in visited:
+      visited.append(current)
+      path.append(current)
+    
+    neighboring_moves = get_neighbors(heightmap, current[0], current[1], visited)
     if neighboring_moves == []:
-      count -= 1
-      current = visited[-2]
+      prev_step = len(path) - 1
+      path = path[:prev_step]
+      current = path[-1]
     else:
       current = neighboring_moves[0]
     
-  return count
+  return len(path)
 
-def get_neighboring_moves(heightmap: list[list[str]], row_index: int, col_index: int, visited: list[tuple[int, int]]) -> tuple[int, int]:
+def get_neighbors(heightmap: list[list[str]], row_index: int, col_index: int, visited: list[tuple[int, int]]) -> tuple[int, int]:
   available_moves = []
   if row_index == 0 and col_index == 0:
     # top left corner
@@ -89,12 +93,23 @@ def get_neighboring_moves(heightmap: list[list[str]], row_index: int, col_index:
     left = row_index, col_index - 1
     right = row_index, col_index + 1
   available_moves.extend([top, bottom, left, right])
-  print(available_moves)
   
-  if heightmap[row_index][col_index] == "S" or heightmap[row_index][col_index] == "E":
-    return sorted([move for move in available_moves if move is not None and move not in visited], key=lambda x: heightmap[x[0]][x[1]], reverse=True)
-  return sorted([move for move in available_moves if move is not None and move not in visited and ord(heightmap[move[0]][move[1]]) - ord(heightmap[row_index][col_index]) <= 1], key=lambda x: heightmap[x[0]][x[1]], reverse=True)
+  valid_moves = sorted([move for move in available_moves if is_valid_move(move, visited)], key=lambda x: heightmap[x[0]][x[1]], reverse=True)
+  if heightmap[row_index][col_index] == "S":
+    return valid_moves
   
+  if heightmap[row_index][col_index] == "z":
+    for move in valid_moves:
+      if heightmap[move[0]][move[1]] == "E":
+        return [move]
+  
+  return [move for move in valid_moves if is_equal_or_ascending(heightmap, move, row_index, col_index)]
+
+def is_equal_or_ascending(heightmap: list[list[str]], move: tuple[int, int], row_index: int, col_index: int) -> bool:
+  return ord(heightmap[move[0]][move[1]]) - ord(heightmap[row_index][col_index]) in [0, 1]
+
+def is_valid_move(move: tuple[int, int], visited: list[tuple[int, int]]) -> bool:
+  return move is not None and move not in visited
 
 if __name__ == "__main__":
   heightmap, start, end = get_map()
